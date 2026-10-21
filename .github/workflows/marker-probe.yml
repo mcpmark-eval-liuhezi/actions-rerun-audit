@@ -1,0 +1,34 @@
+name: Marker Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe-marker:
+    name: Marker Presence Probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (trigger-time commit)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # A failed-job re-run re-executes against the ORIGINAL commit, so we
+      # deliberately do NOT test the checked-out working tree. Instead we
+      # fetch the current tip of the default branch from the remote and test
+      # that, so a re-run can actually observe the branch's current state.
+      - name: Check for marker.txt at the tip of the default branch
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin main
+          echo "Default branch tip on remote: $(git rev-parse origin/main)"
+          if git ls-tree --name-only origin/main | grep -qx 'marker.txt'; then
+            echo "PASS: marker.txt is present at the tip of main"
+            exit 0
+          else
+            echo "FAIL: marker.txt is NOT present at the tip of main"
+            exit 1
+          fi
